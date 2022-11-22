@@ -188,7 +188,7 @@ void triangle(Vec3i* pts, Vec2i* uv, TGAImage& image, int* zbuffer) {
 
 int main(int argc, char** argv) {
 
-    model = new Model("obj/african_head.obj");
+    model = new Model("models/african_head.obj");
 
     //zbuffer 全部初始化为 int max
     zbuffer = new int[width*height];
