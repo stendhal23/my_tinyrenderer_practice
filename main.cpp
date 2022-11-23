@@ -94,20 +94,23 @@ Matrix projection()
 
 // ModelView matrix: 
 Matrix modelView(Vec3f eye, Vec3f target, Vec3f up) {
-    //计算出z，根据z和up算出x，再算出y
+    
+    //这里传入的 up 是固定为 世界坐标 (0, 1, 0) 的, 这是在说: 大多数 camera 一般不会侧翻, 即 世界坐标 up 永远在 camera 的 zoy 平面上; 当然某些特殊的游戏除外, 比如飞行游戏, camera 就是可以 roll 的。 
+    //本代码里的坐标系都是 右手坐标系. 
     Vec3f z = (eye - target).normalize();
     Vec3f x = (up ^ z).normalize();
     Vec3f y = (z ^ x).normalize();
     Matrix rotation = Matrix::identity(4);
     Matrix translation = Matrix::identity(4);
-    //***矩阵的第四列是用于平移的。因为观察位置从原点变为了center，所以需要将物体平移-center***
+    
+    //我们要把 world space coord 变成 camera space 的话, eye 应该位置原点, 所以 world space coord 要作一个 -eye 的位移;
     for (int i = 0; i < 3; i++) {
         translation[i][3] = -eye[i];
     }
     
     // 令 rotation 4x4矩阵中的 3x3 的部分称为 R, 则有:    
     //                      不能直接写出来, 从歪着的 rotation 旋转到与 axis aligned 并不容易, 但反过来旋转却很简单。
-    //                      反过来的旋转 R-1 是: 每列分别为 x, y, z 的 column vector; 所以我们最终要的
+    //                      反过来的 3x3 旋转矩阵 R-1 是: 每列分别为 x, y, z 的 column vector; 所以我们最终要的
     //                      rotation R 是 (R-1)^-1 ,  所以是 (R-1) 的转置
     //                  [
     //                      x
