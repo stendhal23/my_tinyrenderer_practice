@@ -150,7 +150,7 @@ Vec3f barycentric(Vec3i A, Vec3i B, Vec3i C, Vec3i P) {
         s[i][1] = C[i] - A[i];
         s[i][2] = A[i] - P[i];
     }
-    Vec3f t = s[0] ^ s[1];      // t 就是     k*(v, w, 1),  所以 v = t.x/t.z;  w = u.y / u.z; 
+    Vec3f t = s[0] ^ s[1];      // t 就是     k*(v, w, 1),  所以 v = t.x/t.z;  w = t.y / t.z; 
     if (std::abs(t[2]) < 1e-2) // dont forget that u[2] is integer. If it is zero then triangle ABC is degenerate
         return Vec3f(-1, 1, 1); // in this case generate negative coordinates, it will be thrown away by the rasterizator
     return Vec3f(1.f - (t.x + t.y) / t.z, t.x / t.z, t.y / t.z);
