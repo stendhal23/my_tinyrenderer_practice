@@ -64,65 +64,36 @@ Matrix viewport(int x, int y, int w, int h) {
     return m;
 }
 
-// 这里没有用 tinnyrenderer 推导出的 perspective matrix; 而是用的 opengl 的; 
-// tinnyrenderer 那个也能用, 但要注意如果要用那个的话, model view matrix 也要变。 
-// 现在这个 model view matrix 是变成 camera space, 把 camera 放在了原点, 
-// 而 tinnyrenderer 那个不是, 那个是把 "相机看向的位置" 那个点放在原点的, 并把 camera 放在 z+ 轴方向上。 
-// 只有这样才能用那个 perspective matrix; 所以我改成了更常见的 透视矩阵。 
-// 推导过程:     //TODO 
+// tinnyrenderer 原版推导出的 perspective matrix;
 Matrix projection()
 {
-    float l = -0.3;
-    float r = -l;
-    float t = 0.3;
-    float b = -t;
-    float n = 0.9f;
-    float f = 10.f;
-
-    Matrix proj = Matrix(4, 4);
-    proj[0][0] =  (2 * n) / (r - l);
-    proj[0][2] =  (r + l) / (r - l);
-    proj[1][1] =  (2 * n) / (t-b);
-    proj[1][2] =  (t + b) / (t - b);
-    proj[2][2] = -(f + n) / (f - n);
-    proj[2][3] = -(2*n*f) / (f - n);
-    proj[3][2] = -1;
-    proj[3][3] =  0;
-    
+    float c = (eye - center).norm();
+    Matrix proj = Matrix::identity(4);
+    proj[3][2] = -1 / c;
     return proj;
 }
 
-// ModelView matrix: 
+// ModelView matrix:   另一套 
 Matrix modelView(Vec3f eye, Vec3f target, Vec3f up) {
     
-    //这里传入的 up 是固定为 世界坐标 (0, 1, 0) 的, 这是在说: 大多数 camera 一般不会侧翻, 即 世界坐标 up 永远在 camera 的 zoy 平面上; 当然某些特殊的游戏除外, 比如飞行游戏, camera 就是可以 roll 的。 
-    //本代码里的坐标系都是 右手坐标系. 
+
     Vec3f z = (eye - target).normalize();
     Vec3f x = (up ^ z).normalize();
     Vec3f y = (z ^ x).normalize();
     Matrix rotation = Matrix::identity(4);
     Matrix translation = Matrix::identity(4);
     
-    //我们要把 world space coord 变成 camera space 的话, eye 应该位置原点, 所以 world space coord 要作一个 -eye 的位移;
+
     for (int i = 0; i < 3; i++) {
-        translation[i][3] = -eye[i];
+        translation[i][3] = -target[i];
     }
     
-    // 令 rotation 4x4矩阵中的 3x3 的部分称为 R, 则有:    
-    //                      不能直接写出来, 从歪着的 rotation 旋转到与 axis aligned 并不容易, 但反过来旋转却很简单。
-    //                      反过来的 3x3 旋转矩阵 R-1 是: 每列分别为 x, y, z 的 column vector; 所以我们最终要的
-    //                      rotation R 是 (R-1)^-1 ,  所以是 (R-1) 的转置
-    //                  [
-    //                      x
-    //                      y
-    //                      z
-    //                  ]
     for (int i = 0; i < 3; i++) { // 每行分别为 x row vector, y row vector, z row vector; 
         rotation[0][i] = x[i];
         rotation[1][i] = y[i];
         rotation[2][i] = z[i];
     }
-    //这样乘法的效果是先平移物体，再旋转
+
     Matrix res = rotation * translation;
     return res;
 }
@@ -176,7 +147,7 @@ void triangle(Vec3i* pts, Vec2i* uv, TGAImage& image, int* zbuffer) {
             if (c.x < 0 || c.y < 0 || c.z<0 ) continue;
 
             int idx = P.x + P.y * width;
-            if (P.z > zbuffer[idx]) continue;
+            if (P.z < zbuffer[idx]) continue;       //另一套的话, zbuffer 逻辑要改一下
 
             zbuffer[idx] = P.z;
 
@@ -193,10 +164,10 @@ int main(int argc, char** argv) {
 
     model = new Model("models/african_head.obj");
 
-    //zbuffer 全部初始化为 int max
+    //zbuffer 全部初始化为 int min        //另一套的话, zbuffer 逻辑要改一下
     zbuffer = new int[width*height];
     for (int i=0; i<width*height; i++) {
-        zbuffer[i] = std::numeric_limits<int>::max();
+        zbuffer[i] = std::numeric_limits<int>::min();
     }
 
     //ModelView 变换矩阵;  ---> camera space 坐标
